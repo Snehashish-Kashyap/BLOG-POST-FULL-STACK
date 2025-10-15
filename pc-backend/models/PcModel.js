@@ -73,4 +73,13 @@ export const PcModel = {
     );
     return result.rows.length > 0;
   },
+
+  // ✅ Count total blogs by user (for Profile stats)
+  async countByUserId(userId) {
+    const result = await pool.query(
+      `SELECT COUNT(*) AS total FROM pcs WHERE user_id = $1`,
+      [userId]
+    );
+    return result.rows[0]; // { total: '3' }
+  },
 };

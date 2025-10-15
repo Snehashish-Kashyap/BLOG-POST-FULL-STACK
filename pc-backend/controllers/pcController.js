@@ -31,6 +31,22 @@ export const PcController = {
     }
   },
 
+  // ✅ Get blog count for logged-in user (for Profile)
+  async getMyCount(req, res) {
+    try {
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      const result = await PcModel.countByUserId(decoded.id);
+      res.json({ total: parseInt(result.total, 10) });
+    } catch (error) {
+      console.error("Error counting user's blogs:", error);
+      res.status(500).json({ error: "Failed to count user's blogs" });
+    }
+  },
+
   // ✅ Get single blog
   async getById(req, res) {
     try {

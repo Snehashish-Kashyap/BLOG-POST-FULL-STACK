@@ -6,7 +6,7 @@ import { PcController } from "../controllers/pcController.js";
 
 const router = express.Router();
 
-// ✅ Multer config
+// ✅ Multer configuration (for image uploads)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = "public/images";
@@ -20,11 +20,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ✅ Routes
-router.get("/", PcController.getAll);
-router.get("/my", PcController.getMine);
-router.get("/:id", PcController.getById);
-router.post("/", upload.single("image"), PcController.create);
-router.put("/:id", upload.single("image"), PcController.update);
-router.delete("/:id", PcController.delete);
+router.get("/", PcController.getAll);                // All blogs
+router.get("/my", PcController.getMine);             // User’s blogs
+router.get("/my/count", PcController.getMyCount);    // ✅ Blog count (for Profile)
+router.get("/:id", PcController.getById);            // Single blog
+router.post("/", upload.single("image"), PcController.create); // Create blog
+router.put("/:id", upload.single("image"), PcController.update); // Update blog
+router.delete("/:id", PcController.delete);          // Delete blog
 
 export default router;
