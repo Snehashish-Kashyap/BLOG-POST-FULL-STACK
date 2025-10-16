@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import PCGrid from "./components/PCGrid";
 import ManagePCs from "./components/ManagePCs";
@@ -7,8 +7,11 @@ import PCDetails from "./components/PCDetails";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Profile from "./components/Profile";
-import BookOpenAnimation from "./components/BookOpenAnimation";
 import ParticleBackground from "./components/ParticleBackground";
+import WaterEffect from "./components/WaterEffect";
+import StartupAnimation from "./components/StartupAnimation";
+import ThreeBackground from "./components/ThreeBackground";
+
 
 export default function App() {
   return (
@@ -20,36 +23,14 @@ export default function App() {
 
 function MainApp() {
   const [user, setUser] = useState(null);
-  const [showAnimation, setShowAnimation] = useState(false);
-  const location = useLocation();
-  const hasPlayedRef = useRef(false);
-
-  // ✅ Detect whether this tab load is a reload or first navigation
-  const isReloadOrNewVisit = () => {
-    const navEntries = performance.getEntriesByType("navigation");
-    if (navEntries.length > 0) {
-      const navType = navEntries[0].type;
-      return navType === "reload" || navType === "navigate";
-    }
-    // fallback for older browsers
-    if (performance.navigation) {
-      return performance.navigation.type === 1 || performance.navigation.type === 0;
-    }
-    return true;
-  };
+  const [showAnimation, setShowAnimation] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (location.pathname === "/" && !hasPlayedRef.current && isReloadOrNewVisit()) {
-      setShowAnimation(true);
-      hasPlayedRef.current = true;
-      const timer = setTimeout(() => setShowAnimation(false), 3000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowAnimation(false);
-    }
-  }, [location.pathname]);
+    const timer = setTimeout(() => setShowAnimation(false), 3500);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // ✅ Decode JWT for user
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -66,20 +47,19 @@ function MainApp() {
     localStorage.removeItem("token");
     alert("🚪 Logged out successfully!");
     setUser(null);
-    window.location.href = "/";
+    navigate("/");
   };
-
-  // ✅ Show book animation only on homepage for reloads / fresh loads
-  if (showAnimation && location.pathname === "/") {
-    return <BookOpenAnimation />;
-  }
 
   return (
     <>
-      <ParticleBackground />
+      {showAnimation && <StartupAnimation />} {/* 🔝 Topmost */}
 
-      <div className="min-h-screen bg-gradient-to-br from-black via-[#020b02] to-[#001000] text-green-400 relative overflow-hidden perspective-[1200px]">
-        {/* ⚡ Header */}
+      <ParticleBackground /> {/* ✨ behind main UI */}
+      <WaterEffect />
+      <ThreeBackground /> {/* 💧 behind everything */}
+
+      <div className="relative z-10 min-h-screen bg-gradient-to-br from-black/90 via-[#020b02]/90 to-[#001000]/90 text-green-400 overflow-hidden">
+        {/* 🌟 Header */}
         <motion.header
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -89,7 +69,6 @@ function MainApp() {
           border border-green-700 shadow-[0_0_25px_rgba(0,255,0,0.5)] hover:shadow-[0_0_45px_rgba(0,255,0,0.9)] 
           transition-all duration-500 transform hover:scale-[1.02]"
         >
-          {/* Logo */}
           <motion.h1
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -135,7 +114,7 @@ function MainApp() {
           </nav>
         </motion.header>
 
-        {/* 🌍 Main */}
+        {/* 🌍 Routes */}
         <main className="max-w-6xl mx-auto p-6 relative z-10">
           <Routes>
             <Route path="/" element={<PCGrid />} />
@@ -146,9 +125,6 @@ function MainApp() {
             <Route path="/profile" element={<Profile />} />
           </Routes>
         </main>
-
-        <div className="fixed inset-0 border-2 border-green-700/20 rounded-[30px] pointer-events-none 
-        shadow-[inset_0_0_40px_rgba(0,255,0,0.3),0_0_60px_rgba(0,255,0,0.2)]"></div>
       </div>
     </>
   );
@@ -157,14 +133,10 @@ function MainApp() {
 /* 🧠 Cyber Button Component */
 function CyberButton({ label, to, color }) {
   const colors = {
-    green:
-      "from-green-700 to-green-500 hover:from-green-400 hover:to-green-300 border-green-400 shadow-[0_0_25px_rgba(0,255,0,0.5)]",
-    blue:
-      "from-blue-700 to-blue-500 hover:from-blue-500 hover:to-blue-400 border-blue-400 shadow-[0_0_25px_rgba(0,150,255,0.6)]",
-    yellow:
-      "from-yellow-600 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 border-yellow-300 shadow-[0_0_25px_rgba(255,255,0,0.6)]",
-    cyan:
-      "from-cyan-600 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,0.6)]",
+    green: "from-green-700 to-green-500 hover:from-green-400 hover:to-green-300 border-green-400 shadow-[0_0_25px_rgba(0,255,0,0.5)]",
+    blue: "from-blue-700 to-blue-500 hover:from-blue-500 hover:to-blue-400 border-blue-400 shadow-[0_0_25px_rgba(0,150,255,0.6)]",
+    yellow: "from-yellow-600 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 border-yellow-300 shadow-[0_0_25px_rgba(255,255,0,0.6)]",
+    cyan: "from-cyan-600 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,0.6)]",
   };
 
   return (

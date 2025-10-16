@@ -4,23 +4,23 @@ const { Pool } = pkg;
 
 dotenv.config();
 
-// ✅ Pool for blog database
-export const poolBlog = new Pool({
-  user: "snehashishkashyap",
-  host: "localhost",
-  database: "pc_blog",
-  password: "",
-  port: 5432,
-});
+// 🌐 Detect environment (Docker or local)
+const isDocker = process.env.DOCKER_ENV === "true";
 
-// ✅ Pool for user authentication (same DB for simplicity)
-export const poolAuth = new Pool({
-  user: "snehashishkashyap",
-  host: "localhost",
-  database: "pc_blog",
-  password: "",
-  port: 5432,
-});
+// ✅ Database connection settings
+const dbConfig = {
+  user: process.env.DB_USER || "postgres",              // Use postgres user inside Docker
+  host: isDocker ? "postgres" : "localhost",            // 'postgres' = service name in docker-compose
+  database: process.env.DB_NAME || "pc_blog",
+  password: process.env.DB_PASSWORD || "postgres",      // Default password in docker-compose
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+};
+
+// ✅ Pool for blog database
+export const poolBlog = new Pool(dbConfig);
+
+// ✅ Pool for user authentication (same DB)
+export const poolAuth = new Pool(dbConfig);
 
 // ✅ Test connections
 (async () => {

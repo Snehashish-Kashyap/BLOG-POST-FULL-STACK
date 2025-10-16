@@ -17,68 +17,68 @@ export default function ManagePCs() {
 
   const token = localStorage.getItem("token");
 
-  // ✅ Fetch only user's blogs
+  // ✅ Fetch logged-in user's blogs safely
   useEffect(() => {
-    const fetchMyPCs = async () => {
+    const fetchMyBlogs = async () => {
       if (!token) {
-        setLoading(false);
         setMessage("⚠️ Please log in to manage your blogs.");
+        setLoading(false);
         return;
       }
 
       try {
         const res = await fetch("http://localhost:5050/api/pcs/my", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) {
-          if (res.status === 401) {
-            setMessage("⚠️ Session expired or invalid token. Please log in again.");
-          } else {
-            setMessage("❌ Failed to load your blogs.");
-          }
-          setPcs([]);
+        if (res.status === 401) {
+          // Token invalid or expired
+          localStorage.removeItem("token");
+          setMessage("⚠️ Session expired. Please log in again.");
+          setLoading(false);
           return;
         }
+
+        if (!res.ok) throw new Error("Failed to load blogs");
 
         const data = await res.json();
         setPcs(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching user PCs:", error);
-        setMessage("❌ Server connection failed. Check backend.");
+        setMessage("❌ Unable to connect to server.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMyPCs();
+    fetchMyBlogs();
   }, [token]);
 
-  // ✅ Input change handler
+  // ✅ Handle input changes
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  // ✅ Drag & Drop
+  // ✅ Handle drag-drop
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     setDragOver(true);
   };
+
   const handleDragLeave = () => setDragOver(false);
 
-  // ✅ File selection
+  // ✅ Handle file input
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) handleFile(file);
   };
 
-  // ✅ Preview
+  // ✅ Preview selected image
   const handleFile = (file) => {
     setImageFile(file);
     const reader = new FileReader();
@@ -86,11 +86,14 @@ export default function ManagePCs() {
     reader.readAsDataURL(file);
   };
 
-  // ✅ Create / Update blog
+  // ✅ Create or Update Blog
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!token) return alert("You must log in first!");
+    if (!token) {
+      alert("You must log in first!");
+      return;
+    }
 
     try {
       const method = editingId ? "PUT" : "POST";
@@ -106,34 +109,52 @@ export default function ManagePCs() {
 
       const res = await fetch(url, {
         method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       const data = await res.json();
+      if (res.status === 401) {
+        setMessage("⚠️ Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error || "Failed to save blog");
 
-      setMessage(data.message || "✅ Blog saved!");
-      setForm({ name: "", description: "", full_description: "" });
-      setImageFile(null);
-      setImagePreview("");
-      setEditingId(null);
+      setMessage(data.message || "✅ Blog saved successfully!");
+      resetForm();
 
-      // Refresh
-      const refresh = await fetch("http://localhost:5050/api/pcs/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const updated = await refresh.json();
-      setPcs(Array.isArray(updated) ? updated : []);
+      // Refresh list
+      await refreshBlogs();
     } catch (error) {
       console.error("Error saving blog:", error);
-      setMessage("❌ Failed to save your blog.");
+      setMessage("❌ Failed to save blog.");
     }
   };
 
-  // ✅ Edit
+  // ✅ Refresh user blogs
+  const refreshBlogs = async () => {
+    try {
+      const res = await fetch("http://localhost:5050/api/pcs/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setPcs(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error refreshing blogs:", error);
+    }
+  };
+
+  // ✅ Reset form after submit
+  const resetForm = () => {
+    setForm({ name: "", description: "", full_description: "" });
+    setImageFile(null);
+    setImagePreview("");
+    setEditingId(null);
+  };
+
+  // ✅ Edit blog
   const handleEdit = (pc) => {
     setForm({
       name: pc.name,
@@ -149,7 +170,7 @@ export default function ManagePCs() {
     setMessage("✏️ Editing your blog...");
   };
 
-  // ✅ Delete
+  // ✅ Delete blog
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this blog?")) return;
 
@@ -158,8 +179,18 @@ export default function ManagePCs() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
-      setMessage(data.message || "🗑️ Deleted successfully!");
+
+      if (res.status === 401) {
+        setMessage("⚠️ Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        return;
+      }
+
+      if (!res.ok) throw new Error(data.error || "Failed to delete blog");
+
+      setMessage(data.message || "🗑️ Blog deleted successfully!");
       setPcs(pcs.filter((p) => p.id !== id));
     } catch (error) {
       console.error("Error deleting blog:", error);
@@ -167,7 +198,7 @@ export default function ManagePCs() {
     }
   };
 
-  // ✅ Render UI
+  // ✅ Loading screen
   if (loading)
     return (
       <div className="text-center text-green-400 mt-10 text-lg">
@@ -208,7 +239,7 @@ export default function ManagePCs() {
           required
         />
 
-        {/* 🖼️ Drag/Click Upload */}
+        {/* 🖼️ Image Upload */}
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -269,7 +300,7 @@ export default function ManagePCs() {
         </button>
       </form>
 
-      {/* 🧩 Blogs Grid */}
+      {/* 🧩 Blog Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pcs.length === 0 ? (
           <p className="text-center col-span-full text-green-400 text-lg">

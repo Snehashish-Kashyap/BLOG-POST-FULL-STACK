@@ -1,74 +1,45 @@
 import { PcModel } from "../models/PcModel.js";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "yourSecretKey123";
 
 export const PcController = {
-  // ✅ Get all blogs
+  // 🟢 Fetch all blogs
   async getAll(req, res) {
     try {
       const pcs = await PcModel.getAll();
       res.json(pcs);
     } catch (error) {
       console.error("Error fetching PCs:", error);
-      res.status(500).json({ error: "Failed to fetch PCs" });
+      res.status(500).json({ error: "Failed to fetch blogs" });
     }
   },
 
-  // ✅ Get my blogs
+  // 🟡 Fetch logged-in user's blogs
   async getMine(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const pcs = await PcModel.getByUserId(decoded.id);
-
+      const userId = req.user.id; // ✅ from auth middleware
+      const pcs = await PcModel.getByUserId(userId);
       res.json(pcs);
     } catch (error) {
       console.error("Error fetching user's PCs:", error);
-      res.status(500).json({ error: "Failed to fetch user's PCs" });
+      res.status(500).json({ error: "Failed to fetch user's blogs" });
     }
   },
 
-  // ✅ Get blog count for logged-in user (for Profile)
-  async getMyCount(req, res) {
-    try {
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const decoded = jwt.verify(token, JWT_SECRET);
-
-      const result = await PcModel.countByUserId(decoded.id);
-      res.json({ total: parseInt(result.total, 10) });
-    } catch (error) {
-      console.error("Error counting user's blogs:", error);
-      res.status(500).json({ error: "Failed to count user's blogs" });
-    }
-  },
-
-  // ✅ Get single blog
+  // 🔍 Get blog by ID
   async getById(req, res) {
     try {
-      const { id } = req.params;
-      const pc = await PcModel.getById(id);
-
+      const pc = await PcModel.getById(req.params.id);
       if (!pc) return res.status(404).json({ error: "Blog not found" });
-
       res.json(pc);
     } catch (error) {
       console.error("Error fetching blog:", error);
-      res.status(500).json({ error: "Failed to load blog details" });
+      res.status(500).json({ error: "Failed to fetch blog" });
     }
   },
 
-  // ✅ Create blog
+  // ✍️ Create new blog
   async create(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const userId = req.user.id;
       const { name, description, full_description } = req.body;
       const image_url = req.file ? `/images/${req.file.filename}` : null;
 
@@ -77,57 +48,49 @@ export const PcController = {
         description,
         image_url,
         full_description,
-        userId: decoded.id,
+        userId,
       });
 
-      res.json({ message: "✅ Blog added successfully!", pc });
+      res.json({ message: "✅ Blog created successfully!", pc });
     } catch (error) {
-      console.error("Error adding PC:", error);
-      res.status(500).json({ error: "Failed to add blog" });
+      console.error("Error creating PC:", error);
+      res.status(500).json({ error: "Failed to create blog" });
     }
   },
 
-  // ✅ Update blog
+  // ✏️ Update blog
   async update(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const userId = req.user.id;
       const { id } = req.params;
       const { name, description, full_description } = req.body;
-      const image_url = req.file
-        ? `/images/${req.file.filename}`
-        : req.body.image_url;
+      const image_url = req.file ? `/images/${req.file.filename}` : req.body.image_url;
 
-      const isOwner = await PcModel.checkOwner(id, decoded.id);
+      const isOwner = await PcModel.checkOwner(id, userId);
       if (!isOwner) return res.status(403).json({ error: "Access denied" });
 
       const pc = await PcModel.update({
         id,
         name,
         description,
-        image_url,
         full_description,
+        image_url,
       });
 
-      res.json({ message: "✅ Blog updated!", pc });
+      res.json({ message: "✅ Blog updated successfully!", pc });
     } catch (error) {
       console.error("Error updating PC:", error);
       res.status(500).json({ error: "Failed to update blog" });
     }
   },
 
-  // ✅ Delete blog
+  // ❌ Delete blog
   async delete(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const userId = req.user.id;
       const { id } = req.params;
 
-      const isOwner = await PcModel.checkOwner(id, decoded.id);
+      const isOwner = await PcModel.checkOwner(id, userId);
       if (!isOwner) return res.status(403).json({ error: "Access denied" });
 
       await PcModel.delete(id);
